@@ -1,17 +1,14 @@
 import json
 import os
 from datetime import datetime
-from collections import Counter
 import re
-from typing import List, Dict, Tuple, Optional
-import random
+from typing import List, Dict, Tuple
 
 # UI 라이브러리
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt, IntPrompt, Confirm
+from rich.prompt import Prompt, IntPrompt
 from rich import box
 
 # 텍스트 유사도 분석 및 머신러닝
@@ -352,7 +349,7 @@ class AdPreferenceAnalyzer:
 
             # 사용자가 좋아하는 광고들의 평균 벡터 계산
             user_vectors = tfidf_matrix[:len(user_liked_texts)]
-            user_profile = user_vectors.mean(axis=0)
+            user_profile = np.asarray(user_vectors.mean(axis=0))
 
             # DB 광고들과의 유사도 계산
             db_vectors = tfidf_matrix[len(user_liked_texts):]
