@@ -333,13 +333,13 @@ class AdPreferenceAnalyzer:
             "[bold yellow]⭐ 당신의 평가[/bold yellow]",
             border_style="yellow"
         ))
-        overall_rating = IntPrompt.ask("\n[bold]이 광고가 마음에 드나요?[/bold]",
+        overall_rating = IntPrompt.ask("\n[bold]이 광고가 마음에 드나요? (1-10)[/bold]",
                                        default=5,
                                        show_default=True)
 
         while not (1 <= overall_rating <= 10):
             console.print("[red]1부터 10 사이의 점수를 입력하세요.[/red]")
-            overall_rating = IntPrompt.ask("[bold]이 광고가 마음에 드나요?[/bold]", default=5)
+            overall_rating = IntPrompt.ask("[bold]이 광고가 마음에 드나요? (1-10)[/bold]", default=5)
 
         return {
             "ad_text": ad_text,
