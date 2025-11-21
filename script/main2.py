@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from collections import Counter
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 # 새로운 라이브러리들
 from kiwipiepy import Kiwi
@@ -13,6 +13,10 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, IntPrompt
 from rich import box
+
+# 텍스트 유사도 분석
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Rich Console 초기화
 console = Console()
@@ -306,6 +310,38 @@ class AdPreferenceAnalyzer:
         with open(self.data_file, 'w', encoding='utf-8') as f:
             json.dump(self.ads, f, ensure_ascii=False, indent=2)
 
+    def find_similar_ads(self, target_ad_text: str, top_n: int = 3) -> List[Tuple[Dict, float]]:
+        """현재 광고와 유사한 광고 찾기 (TF-IDF + 코사인 유사도)"""
+        if len(self.ads) < 2:
+            return []
+
+        try:
+            # 모든 광고 텍스트 수집
+            all_texts = [ad['ad_text'] for ad in self.ads]
+            all_texts.append(target_ad_text)
+
+            # TF-IDF 벡터화
+            vectorizer = TfidfVectorizer()
+            tfidf_matrix = vectorizer.fit_transform(all_texts)
+
+            # 마지막 광고(target)와 다른 광고들의 유사도 계산
+            similarities = cosine_similarity(tfidf_matrix[-1:], tfidf_matrix[:-1])[0]
+
+            # 유사도가 0.1 이상인 광고만 필터링
+            valid_indices = [i for i, sim in enumerate(similarities) if sim >= 0.1]
+
+            if not valid_indices:
+                return []
+
+            # 가장 유사한 광고 인덱스 (내림차순)
+            similar_indices = sorted(valid_indices, key=lambda i: similarities[i], reverse=True)[:top_n]
+
+            return [(self.ads[i], similarities[i]) for i in similar_indices]
+
+        except Exception as e:
+            console.print(f"[yellow]⚠️ 유사도 분석 오류: {e}[/yellow]")
+            return []
+
     def input_and_rate_ad(self):
         """광고 입력 및 평가 (Rich UI)"""
         console.print(Panel.fit(
@@ -328,6 +364,11 @@ class AdPreferenceAnalyzer:
         if sentiment_result:
             self.display_analysis_preview(sentiment_result)
 
+        # 유사 광고 찾기 및 표시
+        similar_ads = self.find_similar_ads(ad_text, top_n=3)
+        if similar_ads:
+            self.display_similar_ads(similar_ads)
+
         # 평가 입력
         console.print(Panel.fit(
             "[bold yellow]⭐ 당신의 평가[/bold yellow]",
@@ -347,6 +388,34 @@ class AdPreferenceAnalyzer:
             "sentiment_analysis": sentiment_result,
             "timestamp": datetime.now().isoformat()
         }
+
+    def display_similar_ads(self, similar_ads: List[Tuple[Dict, float]]):
+        """유사 광고 표시"""
+        console.print("\n[bold magenta]🔍 비슷한 광고를 찾았어요![/bold magenta]")
+
+        # Rich Table 생성
+        table = Table(show_header=True, header_style="bold magenta", box=box.ROUNDED)
+        table.add_column("광고 문구", style="white", width=40)
+        table.add_column("유사도", justify="center", style="cyan", width=10)
+        table.add_column("평점", justify="center", style="yellow", width=8)
+
+        for ad, similarity in similar_ads:
+            ad_text = ad['ad_text'][:37] + "..." if len(ad['ad_text']) > 40 else ad['ad_text']
+            similarity_str = f"{similarity:.2f}"
+            rating_str = f"{ad['overall_rating']}/10"
+            table.add_row(ad_text, similarity_str, rating_str)
+
+        console.print(table)
+
+        # 평균 평점 계산 및 힌트 제공
+        avg_similar_rating = sum(ad['overall_rating'] for ad, _ in similar_ads) / len(similar_ads)
+
+        if avg_similar_rating >= 7:
+            console.print(f"[green]💡 이전에 비슷한 광고를 높게 평가하셨네요! (평균 {avg_similar_rating:.1f}점)[/green]")
+        elif avg_similar_rating <= 4:
+            console.print(f"[yellow]💡 이전에 비슷한 광고를 낮게 평가하셨어요. (평균 {avg_similar_rating:.1f}점)[/yellow]")
+        else:
+            console.print(f"[dim]💡 비슷한 광고의 평균 평점: {avg_similar_rating:.1f}점[/dim]")
 
     def display_analysis_preview(self, analysis: Dict):
         """분석 결과 미리보기 출력 (Rich 스타일)"""
