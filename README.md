@@ -1,173 +1,125 @@
 # Lfair123
 
-한국어 광고 문구 감성 분석 프로젝트
+AI 기반 한국어 광고 감성·취향 분석기
 
-## 프로젝트 소개
+## 프로젝트 한눈에 보기
+- **목적**: 광고 카피를 입력하고 감성·스타일을 분석해 나만의 취향 프로필과 추천 카피를 제공하는 터미널 애플리케이션
+- **핵심 기술**: KNU 한국어 감성사전 기반 감성 점수 + 정규식 토큰화, scikit-learn TF-IDF/코사인 유사도, Rich 컬러 CLI
+- **데이터 흐름**: `ad_data.json`에 사용자가 평가한 광고가 누적되고, `ad_copy_database.json`은 추천용 레퍼런스 카피를 제공
+- **실행 모드**: `script/main2.py`(권장, Rich UI)와 `script/main1.py`(기본 콘솔 버전) 두 가지 진입점
 
-이 프로젝트는 KNU 한국어 감성사전을 기반으로 광고 문구의 감성을 분석하는 AI 도구입니다. **Kiwipiepy** 형태소 분석기와 **Rich** 터미널 UI를 활용하여 정확하고 아름다운 분석 결과를 제공합니다.
+## 기능 하이라이트
+- **정교한 감성 분석**: KNU 감성사전에서 단어 극성을 찾아 평균 점수, 긍/부정 키워드, 혼합 감성 여부를 계산합니다.
+- **광고 스타일 및 산업군 추정**: 사전에 정의된 키워드를 사용해 유머형·감성형 등 11개 스타일과 8개 산업군을 스코어링합니다.
+- **언어 패턴 리포트**: 문장 길이, 질문/감탄, 이모티콘 여부 등을 통해 광고의 표현 톤을 요약합니다.
+- **AI 취향 리포트**: 감성 톤·광고 스타일별 선호도, 최고/최저 광고를 테이블로 시각화합니다.
+- **유사 광고 검색**: 저장된 평가 내역을 TF-IDF로 임베딩하여 입력 광고와 비슷한 카피를 알려주고 평점 힌트를 제공합니다.
+- **맞춤 광고 추천**: 내가 7점 이상 준 광고를 기반으로 `ad_copy_database.json`의 카피 중 유사한 문구를 추천합니다.
+- **Rich UI**: 패널과 테이블, 색상 하이라이트로 분석 흐름과 메뉴가 명확하게 보이도록 구성했습니다.
 
-### 주요 기능
+## 시스템 구성
+```
+Lfair123/
+├── README.md
+├── pyproject.toml          # 프로젝트 메타데이터, 의존성 (rich, numpy, scikit-learn)
+├── uv.lock                 # uv 사용 시 의존성 잠금
+└── script/
+    ├── main1.py            # 콘솔 기반 기본 버전
+    ├── main2.py            # Rich UI + 추천 시스템 포함 (권장 실행)
+    ├── SentiWord_info.json # KNU 한국어 감성사전 (필수 데이터)
+    ├── ad_copy_database.json # 추천용 레퍼런스 광고 카피
+    └── ad_data.json        # 사용자가 평가한 광고 내역 (실행 시 자동 생성/갱신)
+```
 
-- **🔬 고급 형태소 분석**: Kiwipiepy를 활용한 정확한 한국어 토큰화 및 의미 추출
-- **📊 감성 분석**: KNU 한국어 감성사전 기반 정밀 감성 점수 산출
-- **🎨 광고 스타일 분류**: 유머형, 감성형, 정보형, 긴급형, 프리미엄형 등 11가지 스타일 자동 분류
-- **🏢 산업군 분류**: 기술IT, 패션뷰티, 식품음료, 건강의료 등 8가지 산업군 자동 분류
-- **🔑 키워드 추출**: 형태소 기반 핵심 감성 키워드 자동 추출
-- **💬 언어 패턴 분석**: 텍스트 길이, 단어 수, 이모지 사용 등 언어적 특징 분석
-- **⚡ 감성 충돌 감지**: 긍정어와 부정어의 혼합 사용 패턴 감지 및 분석
-- **🔍 유사 광고 추천**: TF-IDF와 코사인 유사도를 활용한 비슷한 광고 자동 검색
-- **✨ 아름다운 UI**: Rich 라이브러리 기반 컬러풀한 터미널 인터페이스
+### 주요 클래스
+- `AdvancedSentimentAnalyzer`: 감성사전 로드 → 단어 추출(`re.findall`) → 감성 점수, 키워드, 스타일/산업군, 언어 패턴, 감성 충돌 정보를 계산합니다.
+- `AdPreferenceAnalyzer`: 광고 입력/평가, 데이터 저장, 유사 광고 탐색, 개인화 추천, 취향 리포트, 히스토리 UI를 담당합니다.
 
-### 버전 정보
+## 설치
 
-- **v1.0 (main1.py)**: 기본 버전 - 정규식 기반 단순 분석
-- **v4.0 (main2.py)**: 개선 버전 - Kiwipiepy 형태소 분석 + Rich UI (권장)
+### UV 사용 (권장)
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS/Linux
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 
-## 설치 방법
+git clone https://github.com/mingmingss/Lfair123.git
+cd Lfair123
 
-### UV를 사용하는 경우 (권장)
+uv venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+uv pip install -e .
+```
 
-[UV](https://github.com/astral-sh/uv)는 빠르고 현대적인 Python 패키지 관리자입니다.
+### pip 사용
+```bash
+git clone https://github.com/mingmingss/Lfair123.git
+cd Lfair123
 
-1. UV 설치 (아직 설치하지 않은 경우)
-   ```bash
-   # macOS/Linux
-   curl -LsSf https://astral.sh/uv/install.sh | sh
+python3 -m venv .venv             # Windows: python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e .
+```
 
-   # Windows
-   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-   ```
+> 요구 사항: Python 3.12 이상, `rich>=13`, `scikit-learn>=1.7`, `numpy>=2.3`. (kiwipiepy는 현재 코드에서 사용하지 않습니다.)
 
-2. 프로젝트 클론 및 설정
-   ```bash
-   git clone https://github.com/mingmingss/Lfair123.git
-   cd Lfair123
+## 실행 방법
 
-   # 가상환경 생성 및 의존성 설치
-   uv venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   uv pip install -e .
-   ```
-
-### UV를 사용하지 않는 경우
-
-일반적인 Python pip를 사용하는 방법입니다.
-
-1. 프로젝트 클론
-   ```bash
-   git clone https://github.com/mingmingss/Lfair123.git
-   cd Lfair123
-   ```
-
-2. 가상환경 생성 (권장)
-   ```bash
-   # macOS/Linux
-   python3 -m venv .venv
-   source .venv/bin/activate
-
-   # Windows
-   python -m venv .venv
-   .venv\Scripts\activate
-   ```
-
-3. 의존성 설치
-   ```bash
-   pip install -e .
-   ```
-
-## 사용 방법
-
-### 개선 버전 실행 (권장)
-
-형태소 분석과 Rich UI가 적용된 최신 버전:
-
+### Rich UI 버전 (권장)
 ```bash
 cd script
 python3 main2.py
 ```
 
-### 기본 버전 실행
-
-기본 정규식 기반 버전:
-
+### 단순 콘솔 버전
 ```bash
 cd script
 python3 main1.py
 ```
 
-## 주요 기능
+첫 실행 시 `script/ad_data.json`이 없으면 자동으로 생성되고, 이후 광고 평가 내역이 계속 누적됩니다.
 
-### 1. 광고 평가하기
-- 광고 문구를 입력하면 자동으로 AI 감성 분석을 수행합니다
-- 형태소 분석 결과, 감성 점수, 광고 스타일, 산업군 등이 표시됩니다
-- 분석 결과를 확인한 후 평점(1-10)을 입력할 수 있습니다
+## 사용 흐름 (main2.py)
+1. **광고 평가하기**
+   - 광고 문구를 입력하면 즉시 감성 분석, 스타일 추정, 언어 패턴, 키워드 등이 Rich 패널로 표시됩니다.
+   - 기존 평가 중 TF-IDF 코사인 유사도가 0.1 이상인 광고를 찾아 평점 힌트를 제공합니다.
+   - 사용자가 1~10점 사이의 평점을 입력하면 `ad_data.json`에 저장됩니다.
+2. **AI 취향 분석 보기**
+   - 감성 톤별 평균 점수, 스타일별 선호도, 평가 건수, 최고/최저 광고를 컬러 테이블로 확인할 수 있습니다.
+3. **평가 기록 보기**
+   - 지금까지 입력한 광고, 평점, 감성 라벨을 번호순으로 보여줍니다.
+4. **맞춤 광고 카피 추천**
+   - 내가 7점 이상 준 광고 텍스트를 평균 벡터로 만들어 `ad_copy_database.json`과 비교한 뒤 상위 N개 카피를 추천합니다.
 
-### 2. AI 취향 분석 보기
-- 저장된 모든 광고 데이터를 기반으로 당신의 광고 취향을 분석합니다
-- 감성 톤 선호도, 광고 스타일 선호도를 테이블로 확인할 수 있습니다
-- 베스트/워스트 광고를 자동으로 추천합니다
+## 데이터 파일 설명
+- `script/SentiWord_info.json`  
+  - KNU 한국어 감성사전 원본(단어, 극성). 필요 시 최신 사전으로 교체 후 동일한 필드(`word`, `polarity`)를 유지하면 됩니다.
+- `script/ad_copy_database.json`  
+  - 브랜드, 카테고리, 카피 텍스트 목록. 추천 품질을 높이고 싶다면 같은 구조로 문구를 추가하세요.
+- `script/ad_data.json`  
+  - 다음과 같은 구조로 사용자 평가가 누적됩니다:
+    ```json
+    {
+      "ad_text": "...",
+      "overall_rating": 8,
+      "sentiment_analysis": {
+        "score": 0.75,
+        "sentiment_label": "긍정",
+        "ad_styles": [["감성형", 2]],
+        "industries": [["패션뷰티", 1]],
+        "keywords": [["사랑", 2]],
+        "language_pattern": {...},
+        "sentiment_conflict": {...},
+        "words": ["사랑", "빛나는", "..."]
+      },
+      "timestamp": "2024-11-22T00:00:00"
+    }
+    ```
 
-### 3. 평가 기록 보기
-- 지금까지 평가한 모든 광고를 테이블 형식으로 확인할 수 있습니다
-- 각 광고의 평점, 감성 라벨이 한눈에 표시됩니다
+## 개발 메모
+- 감성 분석은 정규식으로 추출한 한글/영문 토큰에 한해 감성사전과 매칭합니다. 필요 시 형태소 분석기를 붙이고 `AdvancedSentimentAnalyzer.extract_words`만 교체하면 됩니다.
+- 유사 광고 탐색과 추천 기능은 `scikit-learn`의 `TfidfVectorizer`와 `cosine_similarity`를 사용하며, 유사도 임계값(기본 0.1)을 조정하면 더 엄격한 추천을 만들 수 있습니다.
+- CLI는 Rich의 `Console`, `Table`, `Panel`, `Prompt`를 활용했습니다. UI를 커스터마이징하려면 `display_*` 메서드를 참고하세요.
 
-## 개선 사항 (v4.0)
-
-### 🔬 형태소 분석 (Kiwipiepy)
-- **이전**: 정규식으로 단순 단어 추출 (`re.findall(r'[가-힣]+', text)`)
-- **개선**: 한국어 형태소 분석기로 정확한 토큰화
-  - "먹었다" → "먹"(동사) + "었"(어미) + "다"(어미) 올바르게 분리
-  - 조사, 어미 제거로 정확한 키워드 매칭
-  - 품사 정보 활용 (명사, 동사, 형용사만 추출)
-
-### ✨ Rich UI
-- **이전**: 기본 print() 흑백 텍스트
-- **개선**: 컬러풀하고 구조화된 터미널 UI
-  - 색상으로 감성 점수 표현 (긍정=녹색, 부정=빨간색)
-  - 테이블로 통계 데이터 표시
-  - 패널, 프로그레스 바 등 직관적인 UI
-
-### 🔍 유사 광고 추천 (scikit-learn)
-- **신규 기능**: 광고 평가 시 자동으로 비슷한 광고 검색
-  - TF-IDF로 광고 텍스트를 수치 벡터로 변환
-  - 코사인 유사도로 광고 간 유사도 계산 (0~1, 1이 가장 유사)
-  - 유사도 0.1 이상인 광고 최대 3개 표시
-  - 이전 평가 내역을 기반으로 취향 예측 힌트 제공
-- **활용 예시**:
-  - "건강한 삶을 위한 선택" 입력 시
-  - 이전에 평가한 "당신의 건강을 지켜드립니다" (유사도 0.75) 자동 검색
-  - "이전에 비슷한 광고를 높게 평가하셨네요!" 메시지 표시
-
-## 데이터 파일
-
-- `script/SentiWord_info.json`: KNU 한국어 감성사전 데이터
-- `script/ad_data.json`: 분석된 광고 데이터 저장 파일
-
-## 요구사항
-
-- Python 3.12 이상
-- kiwipiepy >= 0.18.0 (한국어 형태소 분석)
-- rich >= 13.0.0 (터미널 UI)
-- scikit-learn >= 1.0.0 (텍스트 유사도 분석)
-
-## 프로젝트 구조
-
-```
-Lfair123/
-├── script/
-│   ├── main1.py              # 기본 버전 (정규식 기반)
-│   ├── main2.py              # 개선 버전 (Kiwipiepy + Rich)
-│   ├── SentiWord_info.json   # KNU 한국어 감성사전
-│   └── ad_data.json          # 사용자 광고 데이터 (자동 생성)
-├── pyproject.toml            # 프로젝트 설정 및 의존성
-├── uv.lock                   # UV 의존성 락 파일
-└── README.md                 # 프로젝트 문서
-```
-
-## 라이선스
-
-이 프로젝트는 교육 및 연구 목적으로 사용됩니다.
-
-## 기여
-
-버그 리포트나 기능 제안은 이슈로 등록해주세요.
+## 기여 & 문의
+- 버그 제보나 아이디어는 이슈로 남겨주세요.
+- 데이터나 추천 알고리즘을 확장하고 싶다면 PR 환영합니다.
