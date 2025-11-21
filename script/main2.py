@@ -22,8 +22,19 @@ class AdvancedSentimentAnalyzer:
 
     def __init__(self, senti_dict_path="SentiWord_info.json"):
         self.sentiment_dict = {}
-        self.kiwi = Kiwi()
-        self.load_sentiment_dict(senti_dict_path)
+
+        # 현재 스크립트 디렉토리 기준으로 경로 설정
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(script_dir, senti_dict_path)
+
+        self.load_sentiment_dict(full_path)
+
+        # 형태소 분석기 초기화 (감성사전 로드 후)
+        if self.sentiment_dict:
+            console.print("[dim]Kiwi 형태소 분석기 초기화 중...[/dim]")
+            self.kiwi = Kiwi()
+        else:
+            self.kiwi = None
 
         # 광고 스타일 키워드 사전 (확장)
         self.style_keywords = {
@@ -76,20 +87,28 @@ class AdvancedSentimentAnalyzer:
 
     def extract_morphemes(self, text: str) -> List[str]:
         """형태소 분석으로 의미있는 단어 추출"""
-        result = self.kiwi.analyze(text)
+        if not self.kiwi:
+            # Kiwi가 없으면 정규식으로 대체
+            return re.findall(r'[가-힣]+|[a-zA-Z]+', text)
 
-        if not result:
-            return []
+        try:
+            result = self.kiwi.analyze(text)
 
-        # 명사(NNG, NNP), 동사(VV), 형용사(VA), 영어(SL) 추출
-        meaningful_pos = ['NNG', 'NNP', 'VV', 'VA', 'MAG', 'SL']
-        morphemes = []
+            if not result:
+                return []
 
-        for token in result[0][0]:
-            if token.tag in meaningful_pos:
-                morphemes.append(token.form)
+            # 명사(NNG, NNP), 동사(VV), 형용사(VA), 영어(SL) 추출
+            meaningful_pos = ['NNG', 'NNP', 'VV', 'VA', 'MAG', 'SL']
+            morphemes = []
 
-        return morphemes
+            for token in result[0][0]:
+                if token.tag in meaningful_pos:
+                    morphemes.append(token.form)
+
+            return morphemes
+        except Exception as e:
+            console.print(f"[yellow]⚠️ 형태소 분석 오류: {e}, 정규식으로 대체[/yellow]")
+            return re.findall(r'[가-힣]+|[a-zA-Z]+', text)
 
     def classify_ad_style(self, text: str, morphemes: List[str]) -> List[Tuple[str, int]]:
         """광고 스타일 자동 분류 (형태소 기반)"""
@@ -263,7 +282,9 @@ class AdvancedSentimentAnalyzer:
 
 class AdPreferenceAnalyzer:
     def __init__(self):
-        self.data_file = "ad_data.json"
+        # 현재 스크립트 디렉토리 기준으로 경로 설정
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.data_file = os.path.join(script_dir, "ad_data.json")
         self.ads = self.load_data()
 
         # 감성 분석기 초기화
