@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# User-generated data files
+ad_data.json
+script/ad_data.json
