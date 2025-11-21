@@ -4,25 +4,26 @@ from datetime import datetime
 from collections import Counter
 import re
 from typing import List, Dict, Tuple, Optional
+import random
 
-# 새로운 라이브러리들
-from kiwipiepy import Kiwi
+# UI 라이브러리
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt, IntPrompt
+from rich.prompt import Prompt, IntPrompt, Confirm
 from rich import box
 
-# 텍스트 유사도 분석
+# 텍스트 유사도 분석 및 머신러닝
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # Rich Console 초기화
 console = Console()
 
 class AdvancedSentimentAnalyzer:
-    """KNU 한국어 감성사전 기반 고급 감성 분석기 (형태소 분석 강화)"""
+    """KNU 한국어 감성사전 기반 감성 분석기"""
 
     def __init__(self, senti_dict_path="SentiWord_info.json"):
         self.sentiment_dict = {}
@@ -32,13 +33,6 @@ class AdvancedSentimentAnalyzer:
         full_path = os.path.join(script_dir, senti_dict_path)
 
         self.load_sentiment_dict(full_path)
-
-        # 형태소 분석기 초기화 (감성사전 로드 후)
-        if self.sentiment_dict:
-            console.print("[dim]Kiwi 형태소 분석기 초기화 중...[/dim]")
-            self.kiwi = Kiwi()
-        else:
-            self.kiwi = None
 
         # 광고 스타일 키워드 사전 (확장)
         self.style_keywords = {
@@ -89,46 +83,16 @@ class AdvancedSentimentAnalyzer:
         except Exception as e:
             console.print(f"[red]⚠️  감성사전 로드 실패: {e}[/red]")
 
-    def extract_morphemes(self, text: str) -> List[str]:
-        """형태소 분석으로 의미있는 단어 추출"""
-        if not self.kiwi:
-            # Kiwi가 없으면 정규식으로 대체
-            return re.findall(r'[가-힣]+|[a-zA-Z]+', text)
+    def extract_words(self, text: str) -> List[str]:
+        """텍스트에서 단어 추출 (한글, 영어)"""
+        return re.findall(r'[가-힣]+|[a-zA-Z]+', text)
 
-        try:
-            result = self.kiwi.analyze(text)
-
-            if not result:
-                return []
-
-            # 명사(NNG, NNP), 동사(VV), 형용사(VA), 영어(SL) 추출
-            meaningful_pos = ['NNG', 'NNP', 'VV', 'VA', 'MAG', 'SL']
-            morphemes = []
-
-            for token in result[0][0]:
-                if token.tag in meaningful_pos:
-                    morphemes.append(token.form)
-
-            return morphemes
-        except Exception as e:
-            console.print(f"[yellow]⚠️ 형태소 분석 오류: {e}, 정규식으로 대체[/yellow]")
-            return re.findall(r'[가-힣]+|[a-zA-Z]+', text)
-
-    def classify_ad_style(self, text: str, morphemes: List[str]) -> List[Tuple[str, int]]:
-        """광고 스타일 자동 분류 (형태소 기반)"""
+    def classify_ad_style(self, text: str) -> List[Tuple[str, int]]:
+        """광고 스타일 자동 분류"""
         style_scores = {}
 
-        # 원본 텍스트와 형태소 모두에서 검색
         for style, keywords in self.style_keywords.items():
-            score = 0
-            for keyword in keywords:
-                # 원본 텍스트에서 부분 문자열 검색
-                if keyword in text:
-                    score += 1
-                # 형태소에서 정확히 일치하는 단어 검색
-                elif keyword in morphemes:
-                    score += 1
-
+            score = sum(1 for keyword in keywords if keyword in text)
             if score > 0:
                 style_scores[style] = score
 
@@ -136,18 +100,12 @@ class AdvancedSentimentAnalyzer:
         sorted_styles = sorted(style_scores.items(), key=lambda x: x[1], reverse=True)
         return sorted_styles if sorted_styles else [('기타', 0)]
 
-    def classify_industry(self, text: str, morphemes: List[str]) -> List[Tuple[str, int]]:
-        """산업군 자동 분류 (형태소 기반)"""
+    def classify_industry(self, text: str) -> List[Tuple[str, int]]:
+        """산업군 자동 분류"""
         industry_scores = {}
 
         for industry, keywords in self.industry_keywords.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text:
-                    score += 1
-                elif keyword in morphemes:
-                    score += 1
-
+            score = sum(1 for keyword in keywords if keyword in text)
             if score > 0:
                 industry_scores[industry] = score
 
@@ -155,11 +113,11 @@ class AdvancedSentimentAnalyzer:
         sorted_industries = sorted(industry_scores.items(), key=lambda x: x[1], reverse=True)
         return sorted_industries if sorted_industries else [('기타', 0)]
 
-    def extract_keywords(self, morphemes: List[str], top_n: int = 5) -> List[Tuple[str, int]]:
-        """감성 키워드 추출 (형태소 기반)"""
+    def extract_keywords(self, words: List[str], top_n: int = 5) -> List[Tuple[str, int]]:
+        """감성 키워드 추출"""
         keyword_scores = {}
 
-        for word in morphemes:
+        for word in words:
             if word in self.sentiment_dict and len(word) >= 2:
                 score = abs(self.sentiment_dict[word])
                 if score >= 1:  # 극성이 강한 단어만
@@ -212,20 +170,20 @@ class AdvancedSentimentAnalyzer:
 
     def analyze_text(self, text: str) -> Dict:
         """
-        종합 텍스트 감성 분석 (형태소 분석 적용)
+        종합 텍스트 감성 분석
         """
         if not self.sentiment_dict:
             return None
 
-        # 형태소 분석
-        morphemes = self.extract_morphemes(text)
+        # 단어 추출
+        words = self.extract_words(text)
 
         scores = []
         positive_words = []
         negative_words = []
         neutral_count = 0
 
-        for word in morphemes:
+        for word in words:
             if word in self.sentiment_dict:
                 score = self.sentiment_dict[word]
                 scores.append(score)
@@ -275,12 +233,12 @@ class AdvancedSentimentAnalyzer:
             'negative_words': negative_words,
             'neutral_count': neutral_count,
             'total_sentiment_words': len(scores),
-            'ad_styles': self.classify_ad_style(text, morphemes),
-            'industries': self.classify_industry(text, morphemes),
-            'keywords': self.extract_keywords(morphemes),
+            'ad_styles': self.classify_ad_style(text),
+            'industries': self.classify_industry(text),
+            'keywords': self.extract_keywords(words),
             'language_pattern': self.analyze_language_pattern(text),
             'sentiment_conflict': conflict_info,
-            'morphemes': morphemes[:10]  # 처음 10개 형태소만 저장
+            'words': words[:10]  # 처음 10개 단어만 저장
         }
 
 
@@ -435,9 +393,9 @@ class AdPreferenceAnalyzer:
         console.print(f"\n[{sentiment_color}]📊 [{analysis['sentiment_label']}] (감성 점수: {score})[/{sentiment_color}]")
 
         # 형태소 분석 결과
-        if analysis.get('morphemes'):
-            morphemes_str = ', '.join(analysis['morphemes'][:8])
-            console.print(f"[dim]   형태소: {morphemes_str}...[/dim]")
+        if analysis.get('words'):
+            words_str = ', '.join(analysis['words'][:8])
+            console.print(f"[dim]   주요 단어: {words_str}...[/dim]")
 
         # 혼합 감성 상세 정보
         if analysis.get('sentiment_conflict', {}).get('has_conflict'):
