@@ -249,6 +249,10 @@ class AdPreferenceAnalyzer:
         self.data_file = os.path.join(script_dir, "ad_data.json")
         self.ads = self.load_data()
 
+        # 광고 카피 데이터베이스 로드
+        self.ad_copy_db_file = os.path.join(script_dir, "ad_copy_database.json")
+        self.ad_copy_database = self.load_ad_copy_database()
+
         # 감성 분석기 초기화
         console.print("[bold cyan]🚀 AI 광고 취향 분석기 초기화 중...[/bold cyan]")
         self.sentiment_analyzer = AdvancedSentimentAnalyzer()
@@ -262,6 +266,21 @@ class AdPreferenceAnalyzer:
             except:
                 return []
         return []
+
+    def load_ad_copy_database(self):
+        """광고 카피 데이터베이스 로드"""
+        if os.path.exists(self.ad_copy_db_file):
+            try:
+                with open(self.ad_copy_db_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                console.print(f"[green]✅ 광고 카피 DB 로드: {len(data)}개[/green]")
+                return data
+            except Exception as e:
+                console.print(f"[yellow]⚠️ 광고 카피 DB 로드 실패: {e}[/yellow]")
+                return []
+        else:
+            console.print("[yellow]⚠️ 광고 카피 데이터베이스를 찾을 수 없습니다.[/yellow]")
+            return []
 
     def save_data(self):
         """데이터 저장하기"""
@@ -298,6 +317,72 @@ class AdPreferenceAnalyzer:
 
         except Exception as e:
             console.print(f"[yellow]⚠️ 유사도 분석 오류: {e}[/yellow]")
+            return []
+
+    def recommend_personalized_copies(self, top_n: int = 10) -> List[Tuple[Dict, float, str]]:
+        """사용자 취향 기반 광고 카피 추천 (TF-IDF + 코사인 유사도)"""
+        if not self.ad_copy_database:
+            console.print("[yellow]광고 카피 데이터베이스가 비어있습니다.[/yellow]")
+            return []
+
+        if len(self.ads) < 3:
+            console.print("[yellow]추천을 위해서는 최소 3개 이상의 광고를 평가해주세요.[/yellow]")
+            return []
+
+        # 높은 평가를 받은 광고 (7점 이상)
+        high_rated_ads = [ad for ad in self.ads if ad['overall_rating'] >= 7]
+
+        if not high_rated_ads:
+            console.print("[yellow]7점 이상의 광고가 없습니다. 더 많은 광고를 평가해주세요.[/yellow]")
+            return []
+
+        try:
+            # 사용자가 좋아하는 광고 텍스트 수집
+            user_liked_texts = [ad['ad_text'] for ad in high_rated_ads]
+
+            # 광고 카피 DB 텍스트 수집
+            db_texts = [copy['text'] for copy in self.ad_copy_database]
+
+            # 모든 텍스트 합치기 (사용자 선호 + DB)
+            all_texts = user_liked_texts + db_texts
+
+            # TF-IDF 벡터화
+            vectorizer = TfidfVectorizer()
+            tfidf_matrix = vectorizer.fit_transform(all_texts)
+
+            # 사용자가 좋아하는 광고들의 평균 벡터 계산
+            user_vectors = tfidf_matrix[:len(user_liked_texts)]
+            user_profile = user_vectors.mean(axis=0)
+
+            # DB 광고들과의 유사도 계산
+            db_vectors = tfidf_matrix[len(user_liked_texts):]
+            similarities = cosine_similarity(user_profile, db_vectors)[0]
+
+            # 유사도가 0.1 이상인 것만 필터링
+            valid_indices = [i for i, sim in enumerate(similarities) if sim >= 0.1]
+
+            if not valid_indices:
+                console.print("[yellow]유사한 광고 카피를 찾을 수 없습니다.[/yellow]")
+                return []
+
+            # 상위 N개 추천
+            top_indices = sorted(valid_indices, key=lambda i: similarities[i], reverse=True)[:top_n]
+
+            # 결과 구성: (광고 카피 dict, 유사도, 추천 이유)
+            recommendations = []
+            for idx in top_indices:
+                copy_data = self.ad_copy_database[idx]
+                similarity = similarities[idx]
+
+                # 추천 이유 생성
+                reason = f"{copy_data['category']} 스타일"
+
+                recommendations.append((copy_data, similarity, reason))
+
+            return recommendations
+
+        except Exception as e:
+            console.print(f"[red]⚠️ 추천 시스템 오류: {e}[/red]")
             return []
 
     def input_and_rate_ad(self):
@@ -374,6 +459,61 @@ class AdPreferenceAnalyzer:
             console.print(f"[yellow]💡 이전에 비슷한 광고를 낮게 평가하셨어요. (평균 {avg_similar_rating:.1f}점)[/yellow]")
         else:
             console.print(f"[dim]💡 비슷한 광고의 평균 평점: {avg_similar_rating:.1f}점[/dim]")
+
+    def display_recommended_copies(self):
+        """개인화 광고 카피 추천 표시"""
+        console.clear()
+        console.print(Panel.fit(
+            "[bold cyan]✨ AI 맞춤 광고 카피 추천[/bold cyan]\n"
+            "[dim]당신의 취향을 분석해서 선별한 광고 카피들이에요[/dim]",
+            border_style="cyan"
+        ))
+
+        # 추천 받기
+        with console.status("[bold green]🤖 취향 분석 중...", spinner="dots"):
+            recommendations = self.recommend_personalized_copies(top_n=10)
+
+        if not recommendations:
+            return
+
+        # 사용자 통계 표시
+        high_rated_count = len([ad for ad in self.ads if ad['overall_rating'] >= 7])
+        console.print(f"\n[bold]📊 분석 기반:[/bold] 높은 평가 광고 {high_rated_count}개")
+        console.print("─"*70)
+
+        # Rich Table 생성
+        table = Table(show_header=True, header_style="bold cyan", box=box.ROUNDED)
+        table.add_column("순위", style="yellow", width=4, justify="center")
+        table.add_column("광고 카피", style="white", width=40)
+        table.add_column("브랜드", style="green", width=12)
+        table.add_column("스타일", style="magenta", width=12)
+        table.add_column("유사도", style="cyan", width=8, justify="center")
+
+        for idx, (copy_data, similarity, reason) in enumerate(recommendations, 1):
+            rank = str(idx)
+            text = copy_data['text']
+            brand = copy_data.get('brand', 'N/A')
+            category = copy_data.get('category', 'N/A')
+            sim_str = f"{similarity:.2f}"
+
+            table.add_row(rank, text, brand, category, sim_str)
+
+        console.print(table)
+
+        # 카테고리 분포 분석
+        category_count = {}
+        for copy_data, _, _ in recommendations:
+            category = copy_data.get('category', '기타')
+            category_count[category] = category_count.get(category, 0) + 1
+
+        # 가장 많은 카테고리
+        if category_count:
+            top_category = max(category_count.items(), key=lambda x: x[1])
+            console.print(f"\n[bold green]💡 당신은 '{top_category[0]}' 스타일 광고를 선호하시는 것 같아요! ({top_category[1]}개)[/bold green]")
+
+        # 카테고리 분포 표시
+        if len(category_count) > 1:
+            console.print(f"\n[dim]카테고리 분포: {', '.join([f'{k}({v})' for k, v in sorted(category_count.items(), key=lambda x: x[1], reverse=True)])}[/dim]")
 
     def display_analysis_preview(self, analysis: Dict):
         """분석 결과 미리보기 출력 (Rich 스타일)"""
@@ -612,7 +752,7 @@ class AdPreferenceAnalyzer:
             console.clear()
             console.print(Panel.fit(
                 "[bold cyan]🎯 AI 광고 취향 분석기 v4.0[/bold cyan]\n"
-                "[dim]powered by Kiwipiepy & Rich[/dim]",
+                "[dim]powered by TF-IDF & Rich[/dim]",
                 border_style="cyan"
             ))
 
@@ -626,9 +766,10 @@ class AdPreferenceAnalyzer:
             console.print("1. 광고 평가하기")
             console.print("2. AI 취향 분석 보기")
             console.print("3. 평가 기록 보기")
-            console.print("4. 종료")
+            console.print("4. ✨ 맞춤 광고 카피 추천 받기")
+            console.print("5. 종료")
 
-            choice = IntPrompt.ask("\n[bold]선택[/bold]", choices=["1", "2", "3", "4"], default="1")
+            choice = IntPrompt.ask("\n[bold]선택[/bold]", choices=["1", "2", "3", "4", "5"], default="1")
 
             if choice == 1:
                 self.add_new_ad()
@@ -640,6 +781,9 @@ class AdPreferenceAnalyzer:
                 self.show_history()
                 Prompt.ask("\n[dim]계속하려면 Enter를 누르세요[/dim]", default="")
             elif choice == 4:
+                self.display_recommended_copies()
+                Prompt.ask("\n[dim]계속하려면 Enter를 누르세요[/dim]", default="")
+            elif choice == 5:
                 console.print(Panel.fit(
                     "[bold green]프로그램을 종료합니다. 감사합니다! 👋[/bold green]",
                     border_style="green"
