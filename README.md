@@ -3,10 +3,13 @@
 AI 기반 한국어 광고 감성·취향 분석기
 
 ## 프로젝트 한눈에 보기
-- **목적**: 광고 카피를 입력하고 감성·스타일을 분석해 나만의 취향 프로필과 추천 카피를 제공하는 터미널 애플리케이션
+- **목적**: 광고 카피를 입력하고 감성·스타일을 분석해 나만의 취향 프로필과 추천 카피를 제공하는 애플리케이션
 - **핵심 기술**: KNU 한국어 감성사전 기반 감성 점수 + 정규식 토큰화, scikit-learn TF-IDF/코사인 유사도, Rich 컬러 CLI
 - **데이터 흐름**: `ad_data.json`에 사용자가 평가한 광고가 누적되고, `ad_copy_database.json`은 추천용 레퍼런스 카피를 제공
-- **실행 모드**: `script/main2.py`(권장, Rich UI)와 `script/main1.py`(기본 콘솔 버전) 두 가지 진입점
+- **실행 모드**:
+  - `script/main2.py` (권장, Rich UI 터미널 버전)
+  - `gui_version/main_gui.py` (GUI 버전)
+  - `script/main1.py` (기본 콘솔 버전)
 
 ## 기능 하이라이트
 - **정교한 감성 분석**: KNU 감성사전에서 단어 극성을 찾아 평균 점수, 긍/부정 키워드, 혼합 감성 여부를 계산합니다.
@@ -21,8 +24,11 @@ AI 기반 한국어 광고 감성·취향 분석기
 ```
 Lfair123/
 ├── README.md
+├── requirements.txt        # pip 의존성 목록
 ├── pyproject.toml          # 프로젝트 메타데이터, 의존성 (rich, numpy, scikit-learn)
 ├── uv.lock                 # uv 사용 시 의존성 잠금
+├── gui_version/
+│   └── main_gui.py         # Tkinter 기반 GUI 버전
 └── script/
     ├── main1.py            # 콘솔 기반 기본 버전
     ├── main2.py            # Rich UI + 추천 시스템 포함 (권장 실행)
@@ -37,7 +43,7 @@ Lfair123/
 
 ## 설치
 
-### UV 사용 (권장)
+### 방법 1: UV 사용 (권장)
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS/Linux
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
@@ -50,7 +56,17 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-### pip 사용
+### 방법 2: pip + requirements.txt
+```bash
+git clone https://github.com/mingmingss/Lfair123.git
+cd Lfair123
+
+python3 -m venv .venv             # Windows: python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 방법 3: pip + pyproject.toml
 ```bash
 git clone https://github.com/mingmingss/Lfair123.git
 cd Lfair123
@@ -60,23 +76,35 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-> 요구 사항: Python 3.12 이상, `rich>=13`, `scikit-learn>=1.7`, `numpy>=2.3`. (kiwipiepy는 현재 코드에서 사용하지 않습니다.)
+> **요구 사항**:
+> - Python 3.12 이상
+> - 의존성: `rich>=13.0.0`, `scikit-learn>=1.7.2`, `numpy>=2.3.5`
+> - GUI 버전 실행 시 tkinter 필요 (Python 표준 라이브러리, 대부분의 Python 설치에 포함됨)
 
 ## 실행 방법
 
-### Rich UI 버전 (권장)
+### 1. Rich UI 터미널 버전 (권장)
 ```bash
 cd script
 python3 main2.py
 ```
+터미널에서 컬러풀한 Rich UI로 광고를 평가하고 분석합니다.
 
-### 단순 콘솔 버전
+### 2. GUI 버전
+```bash
+cd gui_version
+python3 main_gui.py
+```
+Tkinter 기반 GUI 애플리케이션으로 더 직관적인 인터페이스를 제공합니다.
+
+### 3. 단순 콘솔 버전
 ```bash
 cd script
 python3 main1.py
 ```
+기본 콘솔 인터페이스로 가장 단순한 형태입니다.
 
-첫 실행 시 `script/ad_data.json`이 없으면 자동으로 생성되고, 이후 광고 평가 내역이 계속 누적됩니다.
+> **참고**: 첫 실행 시 `script/ad_data.json`이 없으면 자동으로 생성되고, 이후 광고 평가 내역이 계속 누적됩니다.
 
 ## 사용 흐름 (main2.py)
 1. **광고 평가하기**
