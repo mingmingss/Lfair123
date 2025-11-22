@@ -131,6 +131,7 @@ python3 -c "import tkinter; print('tkinter 사용 가능!')"
 
 ## 데이터 파일 위치 📁
 
+### 기본 구조 (데이터 공유)
 ```
 gui_version/
 ├── main_gui.py          # GUI 메인 프로그램
@@ -142,8 +143,33 @@ gui_version/
 └── ad_copy_database.json    # 추천용 광고 카피 DB
 ```
 
-> **참고**: GUI 버전과 터미널 버전(script/main2.py)은 같은 데이터 파일을 공유합니다.
-> 어느 버전에서 평가하든 데이터가 누적됩니다!
+### 독립 실행 구조 (옵션)
+JSON 파일들을 `gui_version/`에 복사하면 독립적으로 실행할 수 있습니다:
+
+```bash
+# JSON 파일 복사
+cp ../script/SentiWord_info.json .
+cp ../script/ad_copy_database.json .
+
+# 이제 gui_version 폴더만으로 실행 가능!
+python3 main_gui.py
+```
+
+복사 후 구조:
+```
+gui_version/
+├── main_gui.py              # GUI 메인 프로그램
+├── README.md                # 이 파일
+├── SentiWord_info.json      # 감성사전 (복사됨)
+├── ad_copy_database.json    # 광고 카피 DB (복사됨)
+└── ad_data.json             # 평가 데이터 (자동 생성)
+```
+
+> **💡 유연한 파일 탐색**:
+> - 프로그램은 **현재 디렉토리**에서 먼저 JSON 파일을 찾습니다
+> - 없으면 자동으로 `../script/` 디렉토리에서 찾습니다
+> - 기본적으로는 `script/` 폴더의 파일을 공유하여 GUI/터미널 버전 간 데이터가 누적됩니다
+> - 독립적으로 사용하고 싶다면 JSON 파일을 복사하세요!
 
 ## 문제 해결 🔧
 

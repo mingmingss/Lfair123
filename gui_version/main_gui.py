@@ -18,11 +18,24 @@ class AdvancedSentimentAnalyzer:
     def __init__(self, senti_dict_path="SentiWord_info.json"):
         self.sentiment_dict = {}
 
-        # 현재 스크립트 디렉토리 기준으로 경로 설정
+        # 감성사전 파일 경로 찾기 (유연한 경로 탐색)
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        # 부모 디렉토리(script)에서 감성사전 찾기
-        parent_dir = os.path.dirname(script_dir)
-        full_path = os.path.join(parent_dir, "script", senti_dict_path)
+
+        # 1순위: 현재 디렉토리
+        # 2순위: ../script/ 디렉토리
+        possible_paths = [
+            os.path.join(script_dir, senti_dict_path),
+            os.path.join(os.path.dirname(script_dir), "script", senti_dict_path)
+        ]
+
+        full_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                full_path = path
+                break
+
+        if full_path is None:
+            full_path = possible_paths[0]  # 기본값
 
         self.load_sentiment_dict(full_path)
 
@@ -239,11 +252,23 @@ class AdPreferenceGUI:
         self.root.title("🎯 AI 광고 취향 분석기 v4.0 GUI")
         self.root.geometry("1000x700")
 
-        # 데이터 파일 경로 설정
+        # 데이터 파일 경로 설정 (유연한 경로 탐색)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(script_dir)
-        self.data_file = os.path.join(parent_dir, "script", "ad_data.json")
-        self.ad_copy_db_file = os.path.join(parent_dir, "script", "ad_copy_database.json")
+
+        # ad_data.json 경로 찾기: 1순위 현재 디렉토리, 2순위 ../script/
+        data_paths = [
+            os.path.join(script_dir, "ad_data.json"),
+            os.path.join(parent_dir, "script", "ad_data.json")
+        ]
+        self.data_file = data_paths[0] if os.path.exists(data_paths[0]) else data_paths[1]
+
+        # ad_copy_database.json 경로 찾기: 1순위 현재 디렉토리, 2순위 ../script/
+        db_paths = [
+            os.path.join(script_dir, "ad_copy_database.json"),
+            os.path.join(parent_dir, "script", "ad_copy_database.json")
+        ]
+        self.ad_copy_db_file = db_paths[0] if os.path.exists(db_paths[0]) else db_paths[1]
 
         # 데이터 로드
         self.ads = self.load_data()

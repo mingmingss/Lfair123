@@ -28,7 +28,9 @@ Lfair123/
 ├── pyproject.toml          # 프로젝트 메타데이터, 의존성 (rich, numpy, scikit-learn)
 ├── uv.lock                 # uv 사용 시 의존성 잠금
 ├── gui_version/
-│   └── main_gui.py         # Tkinter 기반 GUI 버전
+│   ├── main_gui.py         # Tkinter 기반 GUI 버전
+│   ├── README.md           # GUI 버전 사용 가이드
+│   └── (JSON 파일들)       # 옵션: 복사 시 독립 실행 가능
 └── script/
     ├── main1.py            # 콘솔 기반 기본 버전
     ├── main2.py            # Rich UI + 추천 시스템 포함 (권장 실행)
@@ -36,6 +38,11 @@ Lfair123/
     ├── ad_copy_database.json # 추천용 레퍼런스 광고 카피
     └── ad_data.json        # 사용자가 평가한 광고 내역 (실행 시 자동 생성/갱신)
 ```
+
+> **💡 유연한 파일 구조**:
+> - 각 프로그램은 **같은 디렉토리**의 JSON 파일을 우선적으로 사용합니다
+> - JSON 파일을 `gui_version/`에 복사하면 GUI 버전을 독립적으로 실행할 수 있습니다
+> - 기본적으로는 `script/` 디렉토리의 파일을 공유하여 데이터가 누적됩니다
 
 ### 주요 클래스
 - `AdvancedSentimentAnalyzer`: 감성사전 로드 → 단어 추출(`re.findall`) → 감성 점수, 키워드, 스타일/산업군, 언어 패턴, 감성 충돌 정보를 계산합니다.
