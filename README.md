@@ -28,7 +28,9 @@ Lfair123/
 ├── pyproject.toml          # 프로젝트 메타데이터, 의존성 (rich, numpy, scikit-learn)
 ├── uv.lock                 # uv 사용 시 의존성 잠금
 ├── gui_version/
-│   └── main_gui.py         # Tkinter 기반 GUI 버전
+│   ├── main_gui.py         # Tkinter 기반 GUI 버전
+│   ├── README.md           # GUI 버전 사용 가이드
+│   └── (JSON 파일들)       # 옵션: 복사 시 독립 실행 가능
 └── script/
     ├── main1.py            # 콘솔 기반 기본 버전
     ├── main2.py            # Rich UI + 추천 시스템 포함 (권장 실행)
@@ -37,14 +39,65 @@ Lfair123/
     └── ad_data.json        # 사용자가 평가한 광고 내역 (실행 시 자동 생성/갱신)
 ```
 
+> **💡 유연한 파일 구조**:
+> - 각 프로그램은 **같은 디렉토리**의 JSON 파일을 우선적으로 사용합니다
+> - JSON 파일을 `gui_version/`에 복사하면 GUI 버전을 독립적으로 실행할 수 있습니다
+> - 기본적으로는 `script/` 디렉토리의 파일을 공유하여 데이터가 누적됩니다
+
 ### 주요 클래스
 - `AdvancedSentimentAnalyzer`: 감성사전 로드 → 단어 추출(`re.findall`) → 감성 점수, 키워드, 스타일/산업군, 언어 패턴, 감성 충돌 정보를 계산합니다.
 - `AdPreferenceAnalyzer`: 광고 입력/평가, 데이터 저장, 유사 광고 탐색, 개인화 추천, 취향 리포트, 히스토리 UI를 담당합니다.
 
 ## 설치
 
-### 방법 1: UV 사용 (권장)
+> **요구 사항**:
+> - Python 3.12 이상
+> - 의존성: `rich>=13.0.0`, `scikit-learn>=1.7.2`, `numpy>=2.3.5`
+> - GUI 버전 실행 시 tkinter 필요 (Python 표준 라이브러리, 대부분의 Python 설치에 포함됨)
+
+### 방법 1: 가장 간단한 설치 (초보자 추천) ⭐
+Python만 설치되어 있다면 바로 시작할 수 있습니다!
+
 ```bash
+# 1. 프로젝트 다운로드
+git clone https://github.com/mingmingss/Lfair123.git
+cd Lfair123
+
+# 2. 필요한 라이브러리 설치
+pip install -r requirements.txt
+# 또는: pip3 install -r requirements.txt
+
+# 3. 바로 실행!
+cd script
+python3 main2.py
+```
+
+### 방법 2: 가상환경 사용 (권장, 여러 프로젝트 관리 시)
+다른 프로젝트와 라이브러리 충돌을 방지하고 싶다면 가상환경을 사용하세요.
+
+```bash
+git clone https://github.com/mingmingss/Lfair123.git
+cd Lfair123
+
+# 가상환경 생성
+python3 -m venv .venv             # Windows: python -m venv .venv
+
+# 가상환경 활성화
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 라이브러리 설치
+pip install -r requirements.txt
+
+# 실행
+cd script
+python3 main2.py
+```
+
+### 방법 3: UV 패키지 매니저 사용 (개발자용)
+빠른 패키지 관리를 원한다면 UV를 사용하세요.
+
+```bash
+# UV 설치
 curl -LsSf https://astral.sh/uv/install.sh | sh   # macOS/Linux
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 
@@ -56,30 +109,10 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-### 방법 2: pip + requirements.txt
-```bash
-git clone https://github.com/mingmingss/Lfair123.git
-cd Lfair123
-
-python3 -m venv .venv             # Windows: python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 방법 3: pip + pyproject.toml
-```bash
-git clone https://github.com/mingmingss/Lfair123.git
-cd Lfair123
-
-python3 -m venv .venv             # Windows: python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -e .
-```
-
-> **요구 사항**:
-> - Python 3.12 이상
-> - 의존성: `rich>=13.0.0`, `scikit-learn>=1.7.2`, `numpy>=2.3.5`
-> - GUI 버전 실행 시 tkinter 필요 (Python 표준 라이브러리, 대부분의 Python 설치에 포함됨)
+> **💡 설치 팁**:
+> - Python이 설치되어 있지 않다면 [python.org](https://www.python.org/downloads/)에서 다운로드하세요
+> - `pip: command not found` 에러가 나면 `pip3`을 대신 사용해보세요
+> - 관리자 권한이 필요하다는 메시지가 나오면 `pip install --user -r requirements.txt`를 사용하세요
 
 ## 실행 방법
 
